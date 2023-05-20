@@ -1,0 +1,8 @@
+django
+djangorestframework
+psycopg
+psycopg2
+gunicorn
+whitenoise
+django-heroku
+django-cors-headers
