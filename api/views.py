@@ -1,13 +1,21 @@
-from rest_framework import generics
+from rest_framework import generics, viewsets
 from rest_framework.response import Response
 from .models import Usuario, Cliente, Repuesto
 from .serializers import *
 from django.contrib.auth.hashers import check_password
+from rest_framework.decorators import authentication_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
+
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 class UsuarioListCreateView(generics.ListCreateAPIView):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
 
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 class UsuarioRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
@@ -38,14 +46,20 @@ DELETE /usuarios/<id>/: Elimina un usuario específico.
 POST /usuarios/verificacion/: Verifica si un usuario existe en la base de datos según el correo y la contraseña proporcionados.
 Recuerda que este es solo un ejemplo básico y puede requerir ajustes según tus necesidades específicas, como agregar autenticación y permisos. """
 
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 class ClienteListCreateView(generics.ListCreateAPIView):
     queryset = Cliente.objects.all()
     serializer_class = ClienteSerializer
 
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 class ClienteRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Cliente.objects.all()
     serializer_class = ClienteSerializer
 
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 class ClienteVerificationView(generics.GenericAPIView):
     serializer_class = ClienteSerializer
 
@@ -65,6 +79,18 @@ class RepuestoListCreateView(generics.ListCreateAPIView):
 class RepuestoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Repuesto.objects.all()
     serializer_class = RepuestoSerializer
+
+class RepuestoVerificationView(generics.GenericAPIView):
+    serializer_class = RepuestoSerializer
+
+    def post(self, request, *args, **kwargs):
+        r_nombre_repuesto = request.data.get('r_nombre_repuesto')
+        try:
+            repuesto = Repuesto.objects.get(r_nombre_repuesto=r_nombre_repuesto)
+        except Repuesto.DoesNotExist:
+            return Response({'mensaje': 'Repuesto no encontrado'}, status=404)
+        serializer = self.get_serializer(repuesto)
+        return Response(serializer.data)
 
 class VentaListCreateView(generics.ListCreateAPIView):
     queryset = Venta.objects.all()
@@ -89,6 +115,18 @@ class VehiculoListCreateView(generics.ListCreateAPIView):
 class VehiculoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Vehiculo.objects.all()
     serializer_class = VehiculoSerializer
+
+class VehiculoVerificationView(generics.GenericAPIView):
+    serializer_class = VehiculoSerializer
+
+    def post(self, request, *args, **kwargs):
+        placa = request.data.get('placa')
+        try:
+            vehiculo = Vehiculo.objects.get(placa=placa)
+        except Vehiculo.DoesNotExist:
+            return Response({'mensaje': 'Vehiculo no encontrado'}, status=404)
+        serializer = self.get_serializer(vehiculo)
+        return Response(serializer.data)
 
 class ServicioListCreateView(generics.ListCreateAPIView):
     queryset = Servicio.objects.all()

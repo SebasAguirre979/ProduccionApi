@@ -6,3 +6,5 @@ gunicorn
 whitenoise
 django-heroku
 django-cors-headers
+djangorestframework_simplejwt
+drf-spectacular

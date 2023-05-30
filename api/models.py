@@ -3,11 +3,11 @@ from django.contrib.auth.hashers import make_password
 
 # Create your models here.
 class Usuario(models.Model):
+    cedula = models.CharField(primary_key=True, max_length=10)
     correo = models.EmailField(unique=True)
     contrasena = models.CharField(max_length=128)
     nombre = models.CharField(max_length=255)
     celular = models.BigIntegerField()
-    cedula = models.BigIntegerField(unique=True)
     rol = models.CharField(max_length=10)
     def save(self, *args, **kwargs):
         self.contrasena = make_password(self.contrasena)
@@ -16,14 +16,14 @@ class Usuario(models.Model):
         db_table = "usuario"
 
 class Cliente(models.Model):
+    cedula = models.CharField(primary_key=True, max_length=10)
     nombre = models.CharField(max_length=50)
-    cedula = models.IntegerField(unique=True)
     celular = models.BigIntegerField()
     class Meta:
         db_table = "cliente"
 
 class Repuesto(models.Model):
-    r_nombre_repuesto = models.CharField(max_length=100)
+    r_nombre_repuesto = models.CharField(max_length=30, unique=True)
     r_cantidad = models.IntegerField()
     r_valor_proveedor = models.IntegerField()
     r_valor_publico = models.IntegerField()
@@ -45,8 +45,8 @@ class DetalleVenta(models.Model):
         db_table = "detalleVenta"
 
 class Vehiculo(models.Model):
-    placa = models.CharField(max_length=6, unique=True)
-    tipo = models.CharField(max_length=50)
+    placa = models.CharField(primary_key=True, max_length=6)
+    tipo = models.CharField(max_length=20)
     class Meta:
         db_table = "vehiculo"
 
