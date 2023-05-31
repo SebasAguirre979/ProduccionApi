@@ -3,7 +3,7 @@ from django.contrib.auth.hashers import make_password
 
 # Create your models here.
 class Usuario(models.Model):
-    cedula = models.CharField(primary_key=True, max_length=10)
+    cedula = models.BigIntegerField(primary_key=True)
     correo = models.EmailField(unique=True)
     contrasena = models.CharField(max_length=128)
     nombre = models.CharField(max_length=255)
@@ -16,7 +16,7 @@ class Usuario(models.Model):
         db_table = "usuario"
 
 class Cliente(models.Model):
-    cedula = models.CharField(primary_key=True, max_length=10)
+    cedula = models.BigIntegerField(primary_key=True)
     nombre = models.CharField(max_length=50)
     celular = models.BigIntegerField()
     class Meta:
@@ -25,8 +25,8 @@ class Cliente(models.Model):
 class Repuesto(models.Model):
     r_nombre_repuesto = models.CharField(max_length=30, unique=True)
     r_cantidad = models.IntegerField()
-    r_valor_proveedor = models.IntegerField()
-    r_valor_publico = models.IntegerField()
+    r_valor_proveedor = models.FloatField()
+    r_valor_publico = models.FloatField()
     class Meta:
         db_table = "repuesto"
 
@@ -54,7 +54,7 @@ class Servicio(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     s_descripcion = models.CharField(max_length=100)
     s_vehiculo = models.ForeignKey(Vehiculo, on_delete=models.CASCADE)
-    s_mano_obra = models.IntegerField()
+    s_mano_obra = models.FloatField()
     s_fecha_entrada = models.DateTimeField()
     s_fecha_salida = models.DateTimeField()
     class Meta:
