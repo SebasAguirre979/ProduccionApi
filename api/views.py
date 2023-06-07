@@ -1,4 +1,5 @@
-from rest_framework import generics, viewsets
+from rest_framework import generics, viewsets, status
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Usuario, Cliente, Repuesto
 from .serializers import *
@@ -151,3 +152,349 @@ class ValoracionListCreateView(generics.ListCreateAPIView):
 class ValoracionRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Valoracion.objects.all()
     serializer_class = ValoracionSerializer
+
+#Me hace un post de un servicio con todo y repuestos incluidos
+class ServicioRepuestosPost(APIView):
+    serializer_class = ServicioSerializer
+    def post(self, request, format=None):
+        # Obtener los datos del servicio y los detalles de servicio del cuerpo de la solicitud
+        servicio_data = request.data.get('servicio')
+        detalles_servicio = request.data.get('detalles_servicio')
+
+        # Verificar el stock de todos los repuestos antes de hacer cualquier cambio en la venta
+        repuestos_sin_stock = []
+        for detalle in detalles_servicio:
+            repuesto_id = detalle.get('repuesto')
+            cantidad = detalle.get('s_cantidad')
+
+            repuesto = Repuesto.objects.get(pk=repuesto_id)
+            if cantidad > repuesto.r_cantidad:
+                repuestos_sin_stock.append(repuesto.r_nombre_repuesto)
+
+        if repuestos_sin_stock:
+            error_message = f"No hay suficiente stock para los siguientes repuestos: {', '.join(repuestos_sin_stock)}"
+            return Response({'error': error_message}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Crear la venta
+        servicio_serializer = ServicioSerializer(data=servicio_data)
+        if servicio_serializer.is_valid():
+            servicio = servicio_serializer.save()
+
+            # Realizar los cambios en la venta solo si hay suficiente stock para todos los repuestos
+            total_servicio = 0
+            for detalle in detalles_servicio:
+                repuesto_id = detalle.get('repuesto')
+                cantidad = detalle.get('s_cantidad')
+
+                repuesto = Repuesto.objects.get(pk=repuesto_id)
+
+                # Calcular el subtotal del detalle de venta
+                subtotal = cantidad * repuesto.r_valor_publico
+
+                # Crear el detalle de venta asociado a la venta
+                DetalleServicio.objects.create(servicio=servicio, repuesto=repuesto, s_cantidad=cantidad)
+
+                # Restar el stock del repuesto
+                repuesto.r_cantidad -= cantidad
+                repuesto.save()
+
+                # Sumar el subtotal al total de la venta
+                total_servicio += subtotal
+
+            # Actualizar el campo v_total de la venta
+            servicio.s_total = total_servicio
+            servicio.save()
+
+            return Response({'message': 'Servicio creada exitosamente'}, status=201)
+        else:
+            return Response(servicio_serializer.errors, status=400)
+        
+    
+    def get(self, request, format=None):
+        servicios = Servicio.objects.all()
+        serializer = self.serializer_class(servicios, many=True)
+        return Response(serializer.data)
+
+    
+#Me muestra tanto el cliente y vehiculo completo de un servicio y repuestos
+class ServicioRepuestosViewId(APIView):
+    serializer_class = ServicioSerializer
+    def get(self, request, servicio_id, format=None):
+        try:
+            servicio = Servicio.objects.get(id=servicio_id)
+        except Servicio.DoesNotExist:
+            return Response({'error': 'El servicio no existe'}, status=404)
+        
+        detalles_servicio = DetalleServicio.objects.filter(servicio=servicio)
+        repuestos_data = []
+
+        servicio_data = {
+            'id': servicio.id,
+            'cliente': {
+                'cedula': servicio.cliente.cedula,
+                'nombre': servicio.cliente.nombre,
+                'celular': servicio.cliente.celular,
+            },
+            's_descripcion': servicio.s_descripcion,
+            's_vehiculo': {
+                'placa': servicio.s_vehiculo.placa,
+                'tipo': servicio.s_vehiculo.tipo,
+            },
+            's_mano_obra': servicio.s_mano_obra,
+            's_fecha_entrada': servicio.s_fecha_entrada,
+            's_fecha_salida': servicio.s_fecha_salida,
+            's_total': servicio.s_total,
+            'detalles_servicio': repuestos_data,
+        }
+        
+        for detalle in detalles_servicio:
+            repuesto = detalle.repuesto
+            repuesto_data = {
+                'id': detalle.id,  # ID de DetalleServicio
+                'r_nombre_repuesto': repuesto.r_nombre_repuesto,
+                'r_valor_publico': repuesto.r_valor_publico,
+                's_cantidad': detalle.s_cantidad,
+            }
+            repuestos_data.append(repuesto_data)
+        
+
+        return Response(servicio_data, status=200)
+
+#Agrega el detalle servicio y resta al inventario lo que se agrego ademas del total del servicio
+class DetalleServicioPostAPIView(APIView):
+    def post(self, request, servicio_id, format=None):
+        try:
+            servicio = Servicio.objects.get(pk=servicio_id)
+        except Servicio.DoesNotExist:
+            return Response({"detail": "El servicio no existe."}, status=404)
+
+        repuesto_id = request.data.get('repuesto')
+        s_cantidad = request.data.get('s_cantidad')
+
+        if repuesto_id is None or s_cantidad is None:
+            return Response({"detail": "Debes proporcionar el ID del repuesto y la cantidad."}, status=400)
+
+        try:
+            repuesto = Repuesto.objects.get(pk=repuesto_id)
+        except Repuesto.DoesNotExist:
+            return Response({"detail": "El repuesto no existe."}, status=404)
+
+        s_cantidad = int(s_cantidad)
+
+        if repuesto.r_cantidad < s_cantidad:
+            return Response({"detail": "No hay suficiente inventario disponible para el repuesto."}, status=400)
+
+        repuesto.r_cantidad -= s_cantidad
+        repuesto.save()
+
+        servicio.s_total += repuesto.r_valor_publico * s_cantidad
+        servicio.save()
+
+        detalle_servicio = DetalleServicio.objects.create(
+            servicio=servicio,
+            repuesto=repuesto,
+            s_cantidad=s_cantidad
+        )
+
+        serializer = DetalleServicioSerializer(detalle_servicio)
+        return Response(serializer.data, status=201)
+    
+#Elimina el detalle servicio y devuelve al inventario lo que se elimino del servicio
+class DetalleServicioDeleteAPIView(APIView):
+    def delete(self, request, detalle_servicio_id, format=None):
+        try:
+            detalle_servicio = DetalleServicio.objects.get(id=detalle_servicio_id)
+        except DetalleServicio.DoesNotExist:
+            return Response({'error': f'Detalle de servicio con ID {detalle_servicio_id} no encontrado.'}, status=400)
+        
+        servicio = detalle_servicio.servicio
+        repuesto = detalle_servicio.repuesto
+        repuesto.r_cantidad += detalle_servicio.s_cantidad
+        servicio.s_total -= repuesto.r_valor_publico * detalle_servicio.s_cantidad
+        repuesto.save()
+        servicio.save()
+
+        detalle_servicio.delete()
+
+        return Response({'success': 'Detalle de servicio eliminado correctamente.'}, status=200)
+    
+#Actualiza el detalle servicio la cantidad del repuesto, sea que merme o aumente
+class DetalleServicioUpdateAPIView(APIView):
+    def put(self, request, detalle_servicio_id, format=None):
+        try:
+            detalle_servicio = DetalleServicio.objects.get(id=detalle_servicio_id)
+        except DetalleServicio.DoesNotExist:
+            return Response({'error': f'Detalle de servicio con ID {detalle_servicio_id} no encontrado.'}, status=400)
+        
+        nueva_cantidad = request.data.get('s_cantidad')
+
+        if nueva_cantidad is None:
+            return Response({'error': 'La nueva cantidad no se proporcionó correctamente.'}, status=400)
+
+        repuesto = detalle_servicio.repuesto
+        diferencia_cantidad = nueva_cantidad - detalle_servicio.s_cantidad
+
+        if diferencia_cantidad > repuesto.r_cantidad:
+            return Response({'error': 'No hay suficiente cantidad disponible en el inventario.'}, status=400)
+        
+        total_temporal = 0
+        servicio = detalle_servicio.servicio
+        total_temporal += nueva_cantidad * repuesto.r_valor_publico
+        total_temporal -= detalle_servicio.s_cantidad * repuesto.r_valor_publico
+        servicio.s_total += total_temporal
+        servicio.save()
+    
+        detalle_servicio.s_cantidad = nueva_cantidad
+        detalle_servicio.save()
+
+        repuesto.r_cantidad -= diferencia_cantidad
+        repuesto.save()
+
+        return Response({'success': 'Detalle de servicio actualizado correctamente.'}, status=200)
+    
+class VentaRepuestosPost(APIView):
+    def post(self, request, format=None):
+        # Obtener los datos de la venta y los detalles de venta del cuerpo de la solicitud
+        datos_venta = request.data.get('venta')
+        detalles_venta = request.data.get('detalles_venta')
+
+        # Verificar el stock de todos los repuestos antes de hacer cualquier cambio en la venta
+        repuestos_sin_stock = []
+        for detalle in detalles_venta:
+            repuesto_id = detalle.get('repuesto')
+            cantidad = detalle.get('v_cantidad')
+
+            repuesto = Repuesto.objects.get(pk=repuesto_id)
+            if cantidad > repuesto.r_cantidad:
+                repuestos_sin_stock.append(repuesto.r_nombre_repuesto)
+
+        if repuestos_sin_stock:
+            error_message = f"No hay suficiente stock para los siguientes repuestos: {', '.join(repuestos_sin_stock)}"
+            return Response({'error': error_message}, status=400)
+
+        # Crear la venta
+        venta_serializer = VentaSerializer(data=datos_venta)
+        if venta_serializer.is_valid():
+            venta = venta_serializer.save()
+
+            # Realizar los cambios en la venta solo si hay suficiente stock para todos los repuestos
+            total_venta = 0
+            for detalle in detalles_venta:
+                repuesto_id = detalle.get('repuesto')
+                cantidad = detalle.get('v_cantidad')
+
+                repuesto = Repuesto.objects.get(pk=repuesto_id)
+
+                # Calcular el subtotal del detalle de venta
+                subtotal = cantidad * repuesto.r_valor_publico
+
+                # Crear el detalle de venta asociado a la venta
+                DetalleVenta.objects.create(venta=venta, repuesto=repuesto, v_cantidad=cantidad)
+
+                # Restar el stock del repuesto
+                repuesto.r_cantidad -= cantidad
+                repuesto.save()
+
+                # Sumar el subtotal al total de la venta
+                total_venta += subtotal
+
+            # Actualizar el campo v_total de la venta
+            venta.v_total = total_venta
+            venta.save()
+
+            return Response({'message': 'Venta creada exitosamente'}, status=201)
+        else:
+            return Response(venta_serializer.errors, status=400)
+        
+class VentaRepuestosGetDelete(APIView):
+    def get(self, request, venta_id, format=None):
+        # Obtener la venta por su ID
+        try:
+            venta = Venta.objects.get(pk=venta_id)
+        except Venta.DoesNotExist:
+            return Response({'error': 'La venta especificada no existe'}, status=404)
+
+        # Obtener los detalles de venta asociados a la venta
+        detalles_venta = DetalleVenta.objects.filter(venta=venta)
+
+        # Serializar los detalles de venta con los datos de repuestos
+        detalles_serializer = DetalleVentaSerializer(detalles_venta, many=True)
+
+        # Obtener los datos de repuestos en cada detalle de venta
+        repuestos_data = []
+        for detalle in detalles_venta:
+            repuesto_data = {
+                'r_nombre_repuesto': detalle.repuesto.r_nombre_repuesto,
+                'r_valor_publico': detalle.repuesto.r_valor_publico,
+                'v_cantidad': detalle.v_cantidad
+            }
+            repuestos_data.append(repuesto_data)
+
+        # Serializar la venta y agregar los datos de repuestos
+        venta_serializer = VentaSerializer(venta)
+        venta_data = venta_serializer.data
+        venta_data['repuestos'] = repuestos_data
+
+        return Response(venta_data)
+
+    def delete(self, request, venta_id, format=None):
+        # Obtener la venta por su ID
+        try:
+            venta = Venta.objects.get(pk=venta_id)
+        except Venta.DoesNotExist:
+            return Response({'error': 'La venta especificada no existe'}, status=404)
+
+        # Obtener los detalles de venta asociados a la venta
+        detalles_venta = DetalleVenta.objects.filter(venta=venta)
+
+        # Restablecer los repuestos utilizados en el inventario
+        for detalle in detalles_venta:
+            repuesto = detalle.repuesto
+            repuesto.r_cantidad += detalle.v_cantidad
+            repuesto.save()
+
+        # Eliminar la venta y los detalles de venta
+        venta.delete()
+        detalles_venta.delete()
+
+        return Response({'message': 'La venta y sus detalles se han eliminado correctamente'}, status=200)
+
+#Listar servicios por placa de un vehiculo
+class ServicioDetalleView(APIView):   
+    def get(self, request, vehiculo_id, format=None):
+        servicios = Servicio.objects.filter(s_vehiculo_id=vehiculo_id)
+        resultados = []
+
+        for servicio in servicios:
+            detalles = {
+                "cliente": {
+                    "cedula": servicio.cliente.cedula,
+                    "nombre": servicio.cliente.nombre,
+                    "celular": servicio.cliente.celular
+                },
+                "vehiculo": {
+                    "placa": servicio.s_vehiculo.placa,
+                    "tipo": servicio.s_vehiculo.tipo
+                },
+                "s_descripcion": servicio.s_descripcion,
+                "s_mano_obra": servicio.s_mano_obra,
+                "s_fecha_entrada": servicio.s_fecha_entrada.isoformat(),
+                "s_fecha_salida": servicio.s_fecha_salida.isoformat() if servicio.s_fecha_salida else None,
+                "s_total": servicio.s_total,
+                "estado": servicio.estado,
+                "repuestos": []
+            }
+
+            detalles_servicio = DetalleServicio.objects.filter(servicio=servicio)
+
+            for detalle in detalles_servicio:
+                detalles_repuesto = {
+                    "r_nombre_repuesto": detalle.repuesto.r_nombre_repuesto,
+                    "r_valor_publico": detalle.repuesto.r_valor_publico,
+                    "s_cantidad": detalle.s_cantidad
+                }
+                detalles["repuestos"].append(detalles_repuesto)
+
+            resultados.append(detalles)
+
+        return Response(resultados, status=200)

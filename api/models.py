@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.hashers import make_password
+from django.utils import timezone
 
 # Create your models here.
 class Usuario(models.Model):
@@ -33,9 +34,15 @@ class Repuesto(models.Model):
 class Venta(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     v_descripcion = models.CharField(max_length=100)
-    v_fecha = models.DateTimeField()
+    v_fecha = models.DateTimeField(default=timezone.now, editable=False)
+    v_total = models.FloatField(default=0, editable=False)
     class Meta:
         db_table = "venta"
+
+    def save(self, *args, **kwargs):
+        if not self.pk:  # Si es un nuevo venta
+            self.v_fecha = timezone.now()  # Guardar la fecha de entrada
+        super().save(*args, **kwargs)
 
 class DetalleVenta(models.Model):
     venta = models.ForeignKey(Venta, on_delete=models.CASCADE)
@@ -54,11 +61,21 @@ class Servicio(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     s_descripcion = models.CharField(max_length=100)
     s_vehiculo = models.ForeignKey(Vehiculo, on_delete=models.CASCADE)
-    s_mano_obra = models.FloatField()
-    s_fecha_entrada = models.DateTimeField()
-    s_fecha_salida = models.DateTimeField()
+    s_mano_obra = models.FloatField(blank=True, null=True, default=0)
+    s_fecha_entrada = models.DateTimeField(default=timezone.now, editable=False)
+    s_fecha_salida = models.DateTimeField(blank=True, null=True, editable=False)
+    s_total = models.FloatField(default=0, editable=False)
+    estado = models.BooleanField(default=True)
     class Meta:
         db_table = "servicio"
+
+    def save(self, *args, **kwargs):
+        if not self.pk:  # Si es un nuevo servicio
+            self.s_fecha_entrada = timezone.now()  # Guardar la fecha de entrada
+        elif not self.estado:  # Si el estado cambió a False
+            self.s_fecha_salida = timezone.now()  # Guardar la fecha de salida
+            self.s_total += self.s_mano_obra
+        super().save(*args, **kwargs)
 
 class DetalleServicio(models.Model):
     servicio = models.ForeignKey(Servicio, on_delete=models.CASCADE)
@@ -71,5 +88,11 @@ class Valoracion(models.Model):
     servicio = models.OneToOneField(Servicio, on_delete=models.CASCADE)
     calificacion = models.IntegerField()
     opinion = models.CharField(max_length=255)
+    fecha = models.DateTimeField(default=timezone.now, editable=False)
     class Meta:
         db_table = "valoracion"
+
+    def save(self, *args, **kwargs):
+        if not self.pk:  # Si es una nueva valoracion
+            self.fecha = timezone.now()  # Guardar la fecha de entrada
+        super().save(*args, **kwargs)

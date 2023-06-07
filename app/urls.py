@@ -49,5 +49,14 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    path('serviciosconrepuestos/', ServicioRepuestosPost.as_view(), name='add-servicio-con-todos-sus-componentes'),
+    path('servicioclientevehiculo/<int:servicio_id>/', ServicioRepuestosViewId.as_view(), name='servicio-cliente-vehiculo-get-id-servicio'),
+    path('createrepuesto/<int:servicio_id>/', DetalleServicioPostAPIView.as_view(), name='crea-repuesto-a-servicio-por-id-de-servicio'),
+    path('deleterepuesto/<int:detalle_servicio_id>/', DetalleServicioDeleteAPIView.as_view(), name='elimina-repuesto-por-detalleservicio-id'),
+    path('updaterepuesto/<int:detalle_servicio_id>/', DetalleServicioUpdateAPIView.as_view(), name='actualiza-repuesto-por-detalleservicio-id'),
+    path('ventarepuestos/', VentaRepuestosPost.as_view(), name='crea-venta-repuestos'),
+    path('ventarepuestos/<int:venta_id>/', VentaRepuestosGetDelete.as_view(), name='get-venta-por-id-y-delete'),
+    path('serviciosplaca/<str:vehiculo_id>/', ServicioDetalleView.as_view(), name='get-servicios-vehiculo-por-placa'),
+
 ]
 
