@@ -21,6 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = 'fx9ugv8%d$mzs(#69=(vp_%(15x8%-b#7bop%3pcsdf8o44%%q'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -32,7 +33,7 @@ TIME_ZONE = 'America/Bogota'
 
 #configuracion de CORS 
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
-SECRET_KEY = os.environ.get('SECRET_KEY')
+#SECRET_KEY = os.environ.get('SECRET_KEY')
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 

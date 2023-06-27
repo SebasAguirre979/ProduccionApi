@@ -7,6 +7,9 @@ from django.contrib.auth.hashers import check_password
 from rest_framework.decorators import authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.db.models import Sum, F
+from datetime import datetime
+from django.utils.timezone import make_aware
 
 
 @authentication_classes([JWTAuthentication])
@@ -25,17 +28,19 @@ class UsuarioVerificationView(generics.GenericAPIView):
     serializer_class = LoginSerializer
 
     def post(self, request, *args, **kwargs):
-        correo = request.data.get('correo')
+        cedula = request.data.get('cedula')
         contrasena = request.data.get('contrasena')
         nombre = request.data.get('nombre')
         try:
-            usuario = Usuario.objects.get(correo=correo)
+            usuario = Usuario.objects.get(cedula=cedula)
         except Usuario.DoesNotExist:
             return Response({'mensaje': 'Usuario no encontrado'}, status=404)
         if not check_password(contrasena, usuario.contrasena):
+            print(check_password(contrasena, usuario.contrasena))
             return Response({'mensaje': 'Contraseña incorrecta'}, status=400)
         serializer = self.get_serializer(usuario)
-        return Response({'nombre': serializer.data['nombre']})
+        print(check_password(contrasena, usuario.contrasena))
+        return Response({'nombre': serializer.data['nombre'],'cedula': serializer.data['cedula']})
     
 """ Ahora deberías tener un API REST en Django con las siguientes rutas:
 
@@ -44,8 +49,37 @@ POST /usuarios/: Crea un nuevo usuario.
 GET /usuarios/<id>/: Obtiene los detalles de un usuario específico.
 PUT /usuarios/<id>/: Actualiza los detalles de un usuario específico.
 DELETE /usuarios/<id>/: Elimina un usuario específico.
-POST /usuarios/verificacion/: Verifica si un usuario existe en la base de datos según el correo y la contraseña proporcionados.
+POST /usuarios/verificacion/: Verifica si un usuario existe en la base de datos según la cedula y la contraseña proporcionados.
 Recuerda que este es solo un ejemplo básico y puede requerir ajustes según tus necesidades específicas, como agregar autenticación y permisos. """
+
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+class UsuarioCambioContrasenaView(APIView):
+    def post(self, request, cedula):
+        # Obtener los datos enviados en la solicitud POST
+        contrasena_antigua = request.data.get('contrasena_antigua')
+        contrasena_nueva = request.data.get('contrasena_nueva')
+
+        if not contrasena_nueva:
+            return Response({'error': 'La contraseña nueva no puede estar vacía'}, status=400)
+        
+        try:
+            # Obtener el usuario por su cédula
+            usuario = Usuario.objects.get(cedula=cedula)
+        except Usuario.DoesNotExist:
+            return Response({'error': 'El usuario no existe'}, status=400)
+
+        # Verificar si la contraseña antigua coincide con la almacenada en la base de datos
+        contrasena_coincide = check_password(contrasena_antigua, usuario.contrasena)
+        if not contrasena_coincide:
+            return Response({'error': 'La contraseña antigua es incorrecta'}, status=400)
+
+        # Cambiar la contraseña y guardar el usuario
+        usuario.contrasena = contrasena_nueva
+        usuario.save()
+
+        return Response({'mensaje': 'Contraseña cambiada exitosamente'})
+
 
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -476,6 +510,7 @@ class ServicioDetalleView(APIView):
                     "placa": servicio.s_vehiculo.placa,
                     "tipo": servicio.s_vehiculo.tipo
                 },
+                "id": servicio.id,
                 "s_descripcion": servicio.s_descripcion,
                 "s_mano_obra": servicio.s_mano_obra,
                 "s_fecha_entrada": servicio.s_fecha_entrada.isoformat(),
@@ -498,3 +533,99 @@ class ServicioDetalleView(APIView):
             resultados.append(detalles)
 
         return Response(resultados, status=200)
+    
+class ReporteServicioView(APIView):
+
+    def get(self, request, fecha_inicio, fecha_fin):
+        fecha_inicio = make_aware(datetime.strptime(fecha_inicio, "%Y-%m-%d"))
+        fecha_fin = make_aware(datetime.strptime(fecha_fin, "%Y-%m-%d"))
+
+        # Filtrar los servicios en el intervalo de fechas dado
+        servicios = Servicio.objects.filter(s_fecha_salida__range=[fecha_inicio, fecha_fin])
+
+        # Calcular el total bruto sumando los totales de todos los servicios
+        total_bruto = servicios.aggregate(Sum('s_total'))['s_total__sum'] or 0
+
+        # Calcular las ganancias
+        detalle_servicios = DetalleServicio.objects.filter(servicio__in=servicios)
+        costo_repuestos = detalle_servicios.annotate(total_costo=F('s_cantidad') * F('repuesto__r_valor_proveedor')).aggregate(Sum('total_costo'))['total_costo__sum'] or 0
+        ganancias = total_bruto - costo_repuestos
+
+        # Generar el resumen de los servicios
+        resumen_servicios = []
+        for servicio in servicios:
+            detalles = DetalleServicio.objects.filter(servicio=servicio)
+            detalle_data = []
+
+            for detalle in detalles:
+                detalle_data.append({
+                    'r_nombre_repuesto': detalle.repuesto.r_nombre_repuesto,
+                    's_cantidad': detalle.s_cantidad,
+                    'r_valor_proveedor': detalle.repuesto.r_valor_proveedor,
+                    'r_valor_publico': detalle.repuesto.r_valor_publico
+                })
+
+            resumen_servicios.append({
+                'id': servicio.id,
+                'cliente': servicio.cliente,
+                'vehiculo':servicio.s_vehiculo,
+                'descripcion': servicio.s_descripcion,
+                's_fecha_salida': servicio.s_fecha_salida,
+                's_mano_obra': servicio.s_mano_obra,
+                's_total': servicio.s_total,
+                'detalle_servicio': detalle_data
+            })
+
+        # Retorna el resultado
+        return Response({
+            'total_bruto': total_bruto,
+            'ganancias': ganancias,
+            'resumen_servicios': resumen_servicios
+        })
+
+class ReporteVentaView(APIView):
+
+    def get(self, request, fecha_inicio, fecha_fin):
+        fecha_inicio = make_aware(datetime.strptime(fecha_inicio, "%Y-%m-%d"))
+        fecha_fin = make_aware(datetime.strptime(fecha_fin, "%Y-%m-%d"))
+
+        # Filtrar las ventas en el intervalo de fechas dado
+        ventas = Venta.objects.filter(v_fecha__range=[fecha_inicio, fecha_fin])
+
+        # Calcular el total bruto sumando los totales de todas las ventas
+        total_bruto = ventas.aggregate(Sum('v_total'))['v_total__sum'] or 0
+
+        # Calcular las ganancias
+        detalle_ventas = DetalleVenta.objects.filter(venta__in=ventas)
+        costo_repuestos = detalle_ventas.annotate(total_costo=F('v_cantidad') * F('repuesto__r_valor_proveedor')).aggregate(Sum('total_costo'))['total_costo__sum'] or 0
+        ganancias = total_bruto - costo_repuestos
+
+        # Generar el resumen de las ventas
+        resumen_ventas = []
+        for venta in ventas:
+            detalles = DetalleVenta.objects.filter(venta=venta)
+            detalle_data = []
+
+            for detalle in detalles:
+                detalle_data.append({
+                    'r_nombre_repuesto': detalle.repuesto.r_nombre_repuesto,
+                    'v_cantidad': detalle.v_cantidad,
+                    'r_valor_proveedor': detalle.repuesto.r_valor_proveedor,
+                    'r_valor_publico': detalle.repuesto.r_valor_publico
+                })
+
+            resumen_ventas.append({
+                'id': venta.id,
+                'cliente': venta.cliente,
+                'v_descripcion': venta.v_descripcion,
+                'v_fecha': venta.v_fecha,
+                'v_total': venta.v_total,
+                'detalle_venta': detalle_data
+            })
+
+        # Retorna el resultado
+        return Response({
+            'total_bruto': total_bruto,
+            'ganancias': ganancias,
+            'resumen_ventas': resumen_ventas
+        })

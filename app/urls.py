@@ -27,6 +27,7 @@ urlpatterns = [
     path('usuarios/', UsuarioListCreateView.as_view(), name='usuario-list-create'),
     path('usuarios/<int:pk>/', UsuarioRetrieveUpdateDestroyView.as_view(), name='usuario-retrieve-update-destroy'),
     path('usuarios/verificacion/', UsuarioVerificationView.as_view(), name='usuario-verification'),
+    path('usuarios/cambiocontrasena/<int:cedula>/', UsuarioCambioContrasenaView.as_view(), name='cambio-contrasena'),
     path('clientes/', ClienteListCreateView.as_view(), name='cliente-list-create'),
     path('clientes/<int:pk>/', ClienteRetrieveUpdateDestroyView.as_view(), name='cliente-retrieve-update-destroy'),
     path('clientes/verificacion/', ClienteVerificationView.as_view(), name='cliente-verification'),
@@ -57,6 +58,7 @@ urlpatterns = [
     path('ventarepuestos/', VentaRepuestosPost.as_view(), name='crea-venta-repuestos'),
     path('ventarepuestos/<int:venta_id>/', VentaRepuestosGetDelete.as_view(), name='get-venta-por-id-y-delete'),
     path('serviciosplaca/<str:vehiculo_id>/', ServicioDetalleView.as_view(), name='get-servicios-vehiculo-por-placa'),
-
+    path('reporte-servicio/<str:fecha_inicio>/<str:fecha_fin>/', ReporteServicioView.as_view()),
+    path('reporte-venta/<str:fecha_inicio>/<str:fecha_fin>/', ReporteVentaView.as_view()),
 ]
 
