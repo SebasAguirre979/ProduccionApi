@@ -5,11 +5,10 @@ from django.utils import timezone
 # Create your models here.
 class Usuario(models.Model):
     cedula = models.BigIntegerField(primary_key=True)
-    correo = models.EmailField(unique=True)
-    contrasena = models.CharField(max_length=128)
-    nombre = models.CharField(max_length=255)
+    contrasena = models.CharField(max_length=128, blank=False)
+    nombre = models.CharField(max_length=255, blank=False)
     celular = models.BigIntegerField()
-    rol = models.CharField(max_length=10)
+    rol = models.CharField(max_length=10, blank=False)
     def save(self, *args, **kwargs):
         self.contrasena = make_password(self.contrasena)
         super().save(*args, **kwargs)
@@ -18,16 +17,16 @@ class Usuario(models.Model):
 
 class Cliente(models.Model):
     cedula = models.BigIntegerField(primary_key=True)
-    nombre = models.CharField(max_length=50)
+    nombre = models.CharField(max_length=50, blank=False)
     celular = models.BigIntegerField()
     class Meta:
         db_table = "cliente"
 
 class Repuesto(models.Model):
     r_nombre_repuesto = models.CharField(max_length=30, unique=True)
-    r_cantidad = models.IntegerField()
-    r_valor_proveedor = models.FloatField()
-    r_valor_publico = models.FloatField()
+    r_cantidad = models.IntegerField(blank=False)
+    r_valor_proveedor = models.FloatField(blank=False)
+    r_valor_publico = models.FloatField(blank=False)
     class Meta:
         db_table = "repuesto"
 
@@ -47,7 +46,7 @@ class Venta(models.Model):
 class DetalleVenta(models.Model):
     venta = models.ForeignKey(Venta, on_delete=models.CASCADE)
     repuesto = models.ForeignKey(Repuesto, on_delete=models.CASCADE)
-    v_cantidad = models.IntegerField()
+    v_cantidad = models.IntegerField(blank=False)
     class Meta:
         db_table = "detalleVenta"
 
@@ -80,14 +79,14 @@ class Servicio(models.Model):
 class DetalleServicio(models.Model):
     servicio = models.ForeignKey(Servicio, on_delete=models.CASCADE)
     repuesto = models.ForeignKey(Repuesto, on_delete=models.CASCADE)
-    s_cantidad = models.IntegerField()
+    s_cantidad = models.IntegerField(blank=False)
     class Meta:
         db_table = "detalleServicio"
 
 class Valoracion(models.Model):
     servicio = models.OneToOneField(Servicio, on_delete=models.CASCADE)
-    calificacion = models.IntegerField()
-    opinion = models.CharField(max_length=255)
+    calificacion = models.IntegerField(blank=False)
+    opinion = models.CharField(max_length=255, blank=True)
     fecha = models.DateTimeField(default=timezone.now, editable=False)
     class Meta:
         db_table = "valoracion"
