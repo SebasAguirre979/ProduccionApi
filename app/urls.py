@@ -60,5 +60,6 @@ urlpatterns = [
     path('serviciosplaca/<str:vehiculo_id>/', ServicioDetalleView.as_view(), name='get-servicios-vehiculo-por-placa'),
     path('reporte-servicio/<str:fecha_inicio>/<str:fecha_fin>/', ReporteServicioView.as_view()),
     path('reporte-venta/<str:fecha_inicio>/<str:fecha_fin>/', ReporteVentaView.as_view()),
+    path('verificacion-vehiculo-cliente/', ClienteVehiculoVerificationView.as_view()),
 ]
 

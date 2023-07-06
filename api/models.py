@@ -32,7 +32,6 @@ class Repuesto(models.Model):
 
 class Venta(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
-    v_descripcion = models.CharField(max_length=100)
     v_fecha = models.DateTimeField(default=timezone.now, editable=False)
     v_total = models.FloatField(default=0, editable=False)
     class Meta:

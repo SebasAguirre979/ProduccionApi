@@ -106,6 +106,32 @@ class ClienteVerificationView(generics.GenericAPIView):
             return Response({'mensaje': 'Cliente no encontrado'}, status=404)
         serializer = self.get_serializer(cliente)
         return Response(serializer.data)
+    
+class ClienteVehiculoVerificationView(APIView):
+
+    def post(self, request, *args, **kwargs):
+        cedula = request.data.get('cedula')
+        placa = request.data.get('placa')
+
+        response_data = {}
+
+        cliente_exists = Cliente.objects.filter(cedula=cedula).exists()
+        vehiculo_exists = Vehiculo.objects.filter(placa=placa).exists()
+
+        if cliente_exists and vehiculo_exists:
+            response_data['cedula'] = cedula
+            response_data['placa'] = placa
+        elif cliente_exists:
+            response_data['cedula'] = cedula
+            response_data['placa'] = 'Placa no existe'
+        elif vehiculo_exists:
+            response_data['cedula'] = 'Cedula no existe'
+            response_data['placa'] = placa
+        else:
+            response_data['cedula'] = 'Cedula no existe'
+            response_data['placa'] = 'Placa no existe'
+
+        return Response(response_data)
 
 class RepuestoListCreateView(generics.ListCreateAPIView):
     queryset = Repuesto.objects.all()
@@ -506,7 +532,7 @@ class ServicioDetalleView(APIView):
                     "nombre": servicio.cliente.nombre,
                     "celular": servicio.cliente.celular
                 },
-                "vehiculo": {
+                "s_vehiculo": {
                     "placa": servicio.s_vehiculo.placa,
                     "tipo": servicio.s_vehiculo.tipo
                 },
@@ -517,7 +543,7 @@ class ServicioDetalleView(APIView):
                 "s_fecha_salida": servicio.s_fecha_salida.isoformat() if servicio.s_fecha_salida else None,
                 "s_total": servicio.s_total,
                 "estado": servicio.estado,
-                "repuestos": []
+                "detalles_servicio": []
             }
 
             detalles_servicio = DetalleServicio.objects.filter(servicio=servicio)
@@ -528,7 +554,7 @@ class ServicioDetalleView(APIView):
                     "r_valor_publico": detalle.repuesto.r_valor_publico,
                     "s_cantidad": detalle.s_cantidad
                 }
-                detalles["repuestos"].append(detalles_repuesto)
+                detalles["detalles_servicio"].append(detalles_repuesto)
 
             resultados.append(detalles)
 
