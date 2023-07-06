@@ -107,6 +107,8 @@ class ClienteVerificationView(generics.GenericAPIView):
         serializer = self.get_serializer(cliente)
         return Response(serializer.data)
     
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 class ClienteVehiculoVerificationView(APIView):
 
     def post(self, request, *args, **kwargs):
