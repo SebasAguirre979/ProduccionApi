@@ -171,14 +171,20 @@ class DetalleVentaRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIVie
     queryset = DetalleVenta.objects.all()
     serializer_class = DetalleVentaSerializer
 
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 class VehiculoListCreateView(generics.ListCreateAPIView):
     queryset = Vehiculo.objects.all()
     serializer_class = VehiculoSerializer
 
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 class VehiculoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Vehiculo.objects.all()
     serializer_class = VehiculoSerializer
 
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 class VehiculoVerificationView(generics.GenericAPIView):
     serializer_class = VehiculoSerializer
 
