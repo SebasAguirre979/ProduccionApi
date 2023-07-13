@@ -46,8 +46,16 @@ class DetalleVenta(models.Model):
     venta = models.ForeignKey(Venta, on_delete=models.CASCADE)
     repuesto = models.ForeignKey(Repuesto, on_delete=models.CASCADE)
     v_cantidad = models.IntegerField(blank=False)
+    dv_valor_proveedor = models.FloatField(blank=False, default=0.0)
+    dv_valor_publico = models.FloatField(blank=False, default=0.0)
     class Meta:
         db_table = "detalleVenta"
+
+    def save(self, *args, **kwargs):
+        if not self.pk:  # Si es un nuevo detalleventa
+            self.dv_valor_proveedor = self.repuesto.r_valor_proveedor
+            self.dv_valor_publico = self.repuesto.r_valor_publico  # Guardar la el valor actual
+        super().save(*args, **kwargs)
 
 class Vehiculo(models.Model):
     placa = models.CharField(primary_key=True, max_length=6)
@@ -79,8 +87,16 @@ class DetalleServicio(models.Model):
     servicio = models.ForeignKey(Servicio, on_delete=models.CASCADE)
     repuesto = models.ForeignKey(Repuesto, on_delete=models.CASCADE)
     s_cantidad = models.IntegerField(blank=False)
+    ds_valor_proveedor = models.FloatField(blank=False, default=0.0)
+    ds_valor_publico = models.FloatField(blank=False, default=0.0)
     class Meta:
         db_table = "detalleServicio"
+
+    def save(self, *args, **kwargs):
+        if not self.pk:  # Si es un nuevo detalleservicio
+            self.ds_valor_proveedor = self.repuesto.r_valor_proveedor
+            self.ds_valor_publico = self.repuesto.r_valor_publico  # Guardar la el valor actual
+        super().save(*args, **kwargs)
 
 class Valoracion(models.Model):
     servicio = models.OneToOneField(Servicio, on_delete=models.CASCADE)

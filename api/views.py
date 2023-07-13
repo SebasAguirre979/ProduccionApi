@@ -320,7 +320,7 @@ class ServicioRepuestosViewId(APIView):
             repuesto_data = {
                 'id': detalle.id,  # ID de DetalleServicio
                 'r_nombre_repuesto': repuesto.r_nombre_repuesto,
-                'r_valor_publico': repuesto.r_valor_publico,
+                'ds_valor_publico': detalle.ds_valor_publico,
                 's_cantidad': detalle.s_cantidad,
             }
             repuestos_data.append(repuesto_data)
@@ -378,7 +378,7 @@ class DetalleServicioDeleteAPIView(APIView):
         servicio = detalle_servicio.servicio
         repuesto = detalle_servicio.repuesto
         repuesto.r_cantidad += detalle_servicio.s_cantidad
-        servicio.s_total -= repuesto.r_valor_publico * detalle_servicio.s_cantidad
+        servicio.s_total -= detalle_servicio.ds_valor_publico * detalle_servicio.s_cantidad
         repuesto.save()
         servicio.save()
 
@@ -407,8 +407,8 @@ class DetalleServicioUpdateAPIView(APIView):
         
         total_temporal = 0
         servicio = detalle_servicio.servicio
-        total_temporal += nueva_cantidad * repuesto.r_valor_publico
-        total_temporal -= detalle_servicio.s_cantidad * repuesto.r_valor_publico
+        total_temporal += nueva_cantidad * detalle_servicio.ds_valor_publico
+        total_temporal -= detalle_servicio.s_cantidad * detalle_servicio.ds_valor_publico
         servicio.s_total += total_temporal
         servicio.save()
     
@@ -493,7 +493,7 @@ class VentaRepuestosGetDelete(APIView):
         for detalle in detalles_venta:
             repuesto_data = {
                 'r_nombre_repuesto': detalle.repuesto.r_nombre_repuesto,
-                'r_valor_publico': detalle.repuesto.r_valor_publico,
+                'dv_valor_publico': detalle.dv_valor_publico,
                 'v_cantidad': detalle.v_cantidad
             }
             repuestos_data.append(repuesto_data)
@@ -559,7 +559,7 @@ class ServicioDetalleView(APIView):
             for detalle in detalles_servicio:
                 detalles_repuesto = {
                     "r_nombre_repuesto": detalle.repuesto.r_nombre_repuesto,
-                    "r_valor_publico": detalle.repuesto.r_valor_publico,
+                    "ds_valor_publico": detalle.ds_valor_publico,
                     "s_cantidad": detalle.s_cantidad
                 }
                 detalles["detalles_servicio"].append(detalles_repuesto)
@@ -582,7 +582,7 @@ class ReporteServicioView(APIView):
 
         # Calcular las ganancias
         detalle_servicios = DetalleServicio.objects.filter(servicio__in=servicios)
-        costo_repuestos = detalle_servicios.annotate(total_costo=F('s_cantidad') * F('repuesto__r_valor_proveedor')).aggregate(Sum('total_costo'))['total_costo__sum'] or 0
+        costo_repuestos = detalle_servicios.annotate(total_costo=F('s_cantidad') * F('ds_valor_proveedor')).aggregate(Sum('total_costo'))['total_costo__sum'] or 0
         ganancias = total_bruto - costo_repuestos
 
         # Generar el resumen de los servicios
@@ -595,14 +595,14 @@ class ReporteServicioView(APIView):
                 detalle_data.append({
                     'r_nombre_repuesto': detalle.repuesto.r_nombre_repuesto,
                     's_cantidad': detalle.s_cantidad,
-                    'r_valor_proveedor': detalle.repuesto.r_valor_proveedor,
-                    'r_valor_publico': detalle.repuesto.r_valor_publico
+                    'ds_valor_proveedor': detalle.ds_valor_proveedor,
+                    'ds_valor_publico': detalle.ds_valor_publico
                 })
 
             resumen_servicios.append({
                 'id': servicio.id,
-                'cliente': servicio.cliente,
-                'vehiculo':servicio.s_vehiculo,
+                'cliente': servicio.cliente.cedula,
+                'vehiculo':servicio.s_vehiculo.placa,
                 'descripcion': servicio.s_descripcion,
                 's_fecha_salida': servicio.s_fecha_salida,
                 's_mano_obra': servicio.s_mano_obra,
@@ -631,7 +631,7 @@ class ReporteVentaView(APIView):
 
         # Calcular las ganancias
         detalle_ventas = DetalleVenta.objects.filter(venta__in=ventas)
-        costo_repuestos = detalle_ventas.annotate(total_costo=F('v_cantidad') * F('repuesto__r_valor_proveedor')).aggregate(Sum('total_costo'))['total_costo__sum'] or 0
+        costo_repuestos = detalle_ventas.annotate(total_costo=F('v_cantidad') * F('dv_valor_proveedor')).aggregate(Sum('total_costo'))['total_costo__sum'] or 0
         ganancias = total_bruto - costo_repuestos
 
         # Generar el resumen de las ventas
@@ -644,14 +644,13 @@ class ReporteVentaView(APIView):
                 detalle_data.append({
                     'r_nombre_repuesto': detalle.repuesto.r_nombre_repuesto,
                     'v_cantidad': detalle.v_cantidad,
-                    'r_valor_proveedor': detalle.repuesto.r_valor_proveedor,
-                    'r_valor_publico': detalle.repuesto.r_valor_publico
+                    'dv_valor_proveedor': detalle.dv_valor_proveedor,
+                    'dv_valor_publico': detalle.dv_valor_publico
                 })
 
             resumen_ventas.append({
                 'id': venta.id,
-                'cliente': venta.cliente,
-                'v_descripcion': venta.v_descripcion,
+                'cliente': venta.cliente.cedula,
                 'v_fecha': venta.v_fecha,
                 'v_total': venta.v_total,
                 'detalle_venta': detalle_data
