@@ -470,7 +470,28 @@ class VentaRepuestosPost(APIView):
             venta.v_total = total_venta
             venta.save()
 
-            return Response({'message': 'Venta creada exitosamente'}, status=201)
+            # Obtener los detalles de venta asociados a la venta
+            detalles_venta = DetalleVenta.objects.filter(venta=venta)
+
+            # Serializar los detalles de venta con los datos de repuestos
+            detalles_serializer = DetalleVentaSerializer(detalles_venta, many=True)
+
+            # Obtener los datos de repuestos en cada detalle de venta
+            repuestos_data = []
+            for detalle in detalles_venta:
+                repuesto_data = {
+                    'r_nombre_repuesto': detalle.repuesto.r_nombre_repuesto,
+                    'dv_valor_publico': detalle.dv_valor_publico,
+                    'v_cantidad': detalle.v_cantidad
+                }
+                repuestos_data.append(repuesto_data)
+
+            # Serializar la venta y agregar los datos de repuestos
+            venta_serializer = VentaSerializer(venta)
+            venta_data = venta_serializer.data
+            venta_data['repuestos'] = repuestos_data
+
+            return Response(venta_data, status=201)
         else:
             return Response(venta_serializer.errors, status=400)
         
