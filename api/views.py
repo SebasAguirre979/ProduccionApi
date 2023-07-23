@@ -568,8 +568,8 @@ class ServicioDetalleView(APIView):
                 "id": servicio.id,
                 "s_descripcion": servicio.s_descripcion,
                 "s_mano_obra": servicio.s_mano_obra,
-                "s_fecha_entrada": servicio.s_fecha_entrada.isoformat(),
-                "s_fecha_salida": servicio.s_fecha_salida.isoformat() if servicio.s_fecha_salida else None,
+                "s_fecha_entrada": servicio.s_fecha_entrada,
+                "s_fecha_salida": servicio.s_fecha_salida if servicio.s_fecha_salida else None,
                 "s_total": servicio.s_total,
                 "estado": servicio.estado,
                 "detalles_servicio": []
