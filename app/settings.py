@@ -27,9 +27,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-# Establecer el timezone en "America/Bogota"
-TIME_ZONE = 'America/Bogota'
-
 #configuracion de CORS 
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
 SECRET_KEY = os.environ.get('SECRET_KEY')
@@ -133,7 +130,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Bogota'
 
 USE_I18N = True
 
