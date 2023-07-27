@@ -40,7 +40,7 @@ class UsuarioVerificationView(generics.GenericAPIView):
             return Response({'mensaje': 'Contraseña incorrecta'}, status=400)
         serializer = self.get_serializer(usuario)
         print(check_password(contrasena, usuario.contrasena))
-        return Response({'nombre': serializer.data['nombre'],'cedula': serializer.data['cedula']})
+        return Response({'nombre': serializer.data['nombre'],'cedula': serializer.data['cedula'], 'rol': serializer.data['rol']})
     
 """ Ahora deberías tener un API REST en Django con las siguientes rutas:
 
@@ -312,6 +312,8 @@ class ServicioRepuestosViewId(APIView):
             's_fecha_entrada': servicio.s_fecha_entrada,
             's_fecha_salida': servicio.s_fecha_salida,
             's_total': servicio.s_total,
+            'estado': servicio.estado,
+            'estado_factura': servicio.estado_factura,
             'detalles_servicio': repuestos_data,
         }
         
@@ -322,6 +324,7 @@ class ServicioRepuestosViewId(APIView):
                 'r_nombre_repuesto': repuesto.r_nombre_repuesto,
                 'ds_valor_publico': detalle.ds_valor_publico,
                 's_cantidad': detalle.s_cantidad,
+                'id_repuesto': repuesto.id,
             }
             repuestos_data.append(repuesto_data)
         
@@ -482,7 +485,8 @@ class VentaRepuestosPost(APIView):
                 repuesto_data = {
                     'r_nombre_repuesto': detalle.repuesto.r_nombre_repuesto,
                     'dv_valor_publico': detalle.dv_valor_publico,
-                    'v_cantidad': detalle.v_cantidad
+                    'v_cantidad': detalle.v_cantidad,
+                    'id_repuesto': detalle.repuesto.id,
                 }
                 repuestos_data.append(repuesto_data)
 
@@ -572,6 +576,7 @@ class ServicioDetalleView(APIView):
                 "s_fecha_salida": servicio.s_fecha_salida if servicio.s_fecha_salida else None,
                 "s_total": servicio.s_total,
                 "estado": servicio.estado,
+                "estado_factura": servicio.estado_factura,
                 "detalles_servicio": []
             }
 
@@ -614,6 +619,7 @@ class ReporteServicioView(APIView):
 
             for detalle in detalles:
                 detalle_data.append({
+                    'id_repuesto': detalle.repuesto.id,
                     'r_nombre_repuesto': detalle.repuesto.r_nombre_repuesto,
                     's_cantidad': detalle.s_cantidad,
                     'ds_valor_proveedor': detalle.ds_valor_proveedor,
@@ -663,6 +669,7 @@ class ReporteVentaView(APIView):
 
             for detalle in detalles:
                 detalle_data.append({
+                    'id_repuesto': detalle.repuesto.id,
                     'r_nombre_repuesto': detalle.repuesto.r_nombre_repuesto,
                     'v_cantidad': detalle.v_cantidad,
                     'dv_valor_proveedor': detalle.dv_valor_proveedor,

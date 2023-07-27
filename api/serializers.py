@@ -9,7 +9,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
-        fields = ['cedula', 'contrasena', 'nombre']
+        fields = ['cedula', 'contrasena', 'nombre', 'rol']
 
 class ClienteSerializer(serializers.ModelSerializer):
     class Meta:

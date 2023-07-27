@@ -72,6 +72,7 @@ class Servicio(models.Model):
     s_fecha_salida = models.DateTimeField(blank=True, null=True, editable=False)
     s_total = models.FloatField(default=0, editable=False)
     estado = models.BooleanField(default=True)
+    estado_factura = models.BooleanField(default=False)
     class Meta:
         db_table = "servicio"
 
