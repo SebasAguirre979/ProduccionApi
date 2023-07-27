@@ -10,6 +10,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db.models import Sum, F
 from datetime import datetime
 from django.utils.timezone import make_aware
+from datetime import timedelta
 
 
 @authentication_classes([JWTAuthentication])
@@ -598,7 +599,7 @@ class ReporteServicioView(APIView):
 
     def get(self, request, fecha_inicio, fecha_fin):
         fecha_inicio = make_aware(datetime.strptime(fecha_inicio, "%Y-%m-%d"))
-        fecha_fin = make_aware(datetime.strptime(fecha_fin, "%Y-%m-%d"))
+        fecha_fin = make_aware(datetime.strptime(fecha_fin, "%Y-%m-%d"))+ timedelta(days=1)
 
         # Filtrar los servicios en el intervalo de fechas dado
         servicios = Servicio.objects.filter(s_fecha_salida__range=[fecha_inicio, fecha_fin])
@@ -648,7 +649,7 @@ class ReporteVentaView(APIView):
 
     def get(self, request, fecha_inicio, fecha_fin):
         fecha_inicio = make_aware(datetime.strptime(fecha_inicio, "%Y-%m-%d"))
-        fecha_fin = make_aware(datetime.strptime(fecha_fin, "%Y-%m-%d"))
+        fecha_fin = make_aware(datetime.strptime(fecha_fin, "%Y-%m-%d"))+ timedelta(days=1)
 
         # Filtrar las ventas en el intervalo de fechas dado
         ventas = Venta.objects.filter(v_fecha__range=[fecha_inicio, fecha_fin])
