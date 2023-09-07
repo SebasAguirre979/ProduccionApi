@@ -1,19 +1,3 @@
-"""
-URL configuration for app project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/4.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
 from django.urls import path
 from api.views import *
@@ -33,7 +17,6 @@ urlpatterns = [
     path('clientes/verificacion/', ClienteVerificationView.as_view(), name='cliente-verification'),
     path('repuestos/', RepuestoListCreateView.as_view(), name='repuesto-list-create'),
     path('repuestos/<int:pk>/', RepuestoRetrieveUpdateDestroyView.as_view(), name='repuesto-retrieve-update-destroy'),
-    path('repuestos/verificacion/', RepuestoVerificationView.as_view(), name='repuesto-verification'),
     path('ventas/', VentaListCreateView.as_view(), name='venta-list-create'),
     path('ventas/<int:pk>/', VentaRetrieveUpdateDestroyView.as_view(), name='venta-retrieve-update-destroy'),
     path('detalleventas/', DetalleVentaListCreateView.as_view(), name='detalleventa-list-create'),
@@ -50,6 +33,7 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    #para pruebas de servicio completo
     path('serviciosconrepuestos/', ServicioRepuestosPost.as_view(), name='add-servicio-con-todos-sus-componentes'),
     path('servicioclientevehiculo/<int:servicio_id>/', ServicioRepuestosViewId.as_view(), name='servicio-cliente-vehiculo-get-id-servicio'),
     path('createrepuesto/<int:servicio_id>/', DetalleServicioPostAPIView.as_view(), name='crea-repuesto-a-servicio-por-id-de-servicio'),

@@ -1,4 +1,4 @@
-from rest_framework import generics, viewsets, status
+from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Usuario, Cliente, Repuesto
@@ -11,7 +11,6 @@ from django.db.models import Sum, F
 from datetime import datetime
 from django.utils.timezone import make_aware
 from datetime import timedelta
-
 
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -27,11 +26,9 @@ class UsuarioRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 class UsuarioVerificationView(generics.GenericAPIView):
     serializer_class = LoginSerializer
-
     def post(self, request, *args, **kwargs):
         cedula = request.data.get('cedula')
         contrasena = request.data.get('contrasena')
-        nombre = request.data.get('nombre')
         try:
             usuario = Usuario.objects.get(cedula=cedula)
         except Usuario.DoesNotExist:
@@ -42,16 +39,6 @@ class UsuarioVerificationView(generics.GenericAPIView):
         serializer = self.get_serializer(usuario)
         print(check_password(contrasena, usuario.contrasena))
         return Response({'nombre': serializer.data['nombre'],'cedula': serializer.data['cedula'], 'rol': serializer.data['rol']})
-    
-""" Ahora deberías tener un API REST en Django con las siguientes rutas:
-
-GET /usuarios/: Obtiene una lista de todos los usuarios.
-POST /usuarios/: Crea un nuevo usuario.
-GET /usuarios/<id>/: Obtiene los detalles de un usuario específico.
-PUT /usuarios/<id>/: Actualiza los detalles de un usuario específico.
-DELETE /usuarios/<id>/: Elimina un usuario específico.
-POST /usuarios/verificacion/: Verifica si un usuario existe en la base de datos según la cedula y la contraseña proporcionados.
-Recuerda que este es solo un ejemplo básico y puede requerir ajustes según tus necesidades específicas, como agregar autenticación y permisos. """
 
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -80,7 +67,6 @@ class UsuarioCambioContrasenaView(APIView):
         usuario.save()
 
         return Response({'mensaje': 'Contraseña cambiada exitosamente'})
-
 
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -111,7 +97,6 @@ class ClienteVerificationView(generics.GenericAPIView):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 class ClienteVehiculoVerificationView(APIView):
-
     def post(self, request, *args, **kwargs):
         cedula = request.data.get('cedula')
         placa = request.data.get('placa')
@@ -143,18 +128,6 @@ class RepuestoListCreateView(generics.ListCreateAPIView):
 class RepuestoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Repuesto.objects.all()
     serializer_class = RepuestoSerializer
-
-class RepuestoVerificationView(generics.GenericAPIView):
-    serializer_class = RepuestoSerializer
-
-    def post(self, request, *args, **kwargs):
-        r_nombre_repuesto = request.data.get('r_nombre_repuesto')
-        try:
-            repuesto = Repuesto.objects.get(r_nombre_repuesto=r_nombre_repuesto)
-        except Repuesto.DoesNotExist:
-            return Response({'mensaje': 'Repuesto no encontrado'}, status=404)
-        serializer = self.get_serializer(repuesto)
-        return Response(serializer.data)
 
 class VentaListCreateView(generics.ListCreateAPIView):
     queryset = Venta.objects.all()
@@ -188,7 +161,6 @@ class VehiculoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 @permission_classes([IsAuthenticated])
 class VehiculoVerificationView(generics.GenericAPIView):
     serializer_class = VehiculoSerializer
-
     def post(self, request, *args, **kwargs):
         placa = request.data.get('placa')
         try:
@@ -226,7 +198,6 @@ class ValoracionRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView)
 class ServicioRepuestosPost(APIView):
     serializer_class = ServicioSerializer
     def post(self, request, format=None):
-        # Obtener los datos del servicio y los detalles de servicio del cuerpo de la solicitud
         servicio_data = request.data.get('servicio')
         detalles_servicio = request.data.get('detalles_servicio')
 
@@ -244,7 +215,6 @@ class ServicioRepuestosPost(APIView):
             error_message = f"No hay suficiente stock para los siguientes repuestos: {', '.join(repuestos_sin_stock)}"
             return Response({'error': error_message}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Crear la venta
         servicio_serializer = ServicioSerializer(data=servicio_data)
         if servicio_serializer.is_valid():
             servicio = servicio_serializer.save()
@@ -260,7 +230,6 @@ class ServicioRepuestosPost(APIView):
                 # Calcular el subtotal del detalle de venta
                 subtotal = cantidad * repuesto.r_valor_publico
 
-                # Crear el detalle de venta asociado a la venta
                 DetalleServicio.objects.create(servicio=servicio, repuesto=repuesto, s_cantidad=cantidad)
 
                 # Restar el stock del repuesto
@@ -270,7 +239,6 @@ class ServicioRepuestosPost(APIView):
                 # Sumar el subtotal al total de la venta
                 total_servicio += subtotal
 
-            # Actualizar el campo v_total de la venta
             servicio.s_total = total_servicio
             servicio.save()
 
@@ -278,13 +246,11 @@ class ServicioRepuestosPost(APIView):
         else:
             return Response(servicio_serializer.errors, status=400)
         
-    
     def get(self, request, format=None):
         servicios = Servicio.objects.all()
         serializer = self.serializer_class(servicios, many=True)
         return Response(serializer.data)
 
-    
 #Me muestra tanto el cliente y vehiculo completo de un servicio y repuestos
 class ServicioRepuestosViewId(APIView):
     serializer_class = ServicioSerializer
@@ -321,7 +287,7 @@ class ServicioRepuestosViewId(APIView):
         for detalle in detalles_servicio:
             repuesto = detalle.repuesto
             repuesto_data = {
-                'id': detalle.id,  # ID de DetalleServicio
+                'id': detalle.id,
                 'r_nombre_repuesto': repuesto.r_nombre_repuesto,
                 'ds_valor_publico': detalle.ds_valor_publico,
                 's_cantidad': detalle.s_cantidad,
@@ -426,7 +392,6 @@ class DetalleServicioUpdateAPIView(APIView):
     
 class VentaRepuestosPost(APIView):
     def post(self, request, format=None):
-        # Obtener los datos de la venta y los detalles de venta del cuerpo de la solicitud
         datos_venta = request.data.get('venta')
         detalles_venta = request.data.get('detalles_venta')
 
@@ -444,7 +409,6 @@ class VentaRepuestosPost(APIView):
             error_message = f"No hay suficiente stock para los siguientes repuestos: {', '.join(repuestos_sin_stock)}"
             return Response({'error': error_message}, status=400)
 
-        # Crear la venta
         venta_serializer = VentaSerializer(data=datos_venta)
         if venta_serializer.is_valid():
             venta = venta_serializer.save()
@@ -460,7 +424,6 @@ class VentaRepuestosPost(APIView):
                 # Calcular el subtotal del detalle de venta
                 subtotal = cantidad * repuesto.r_valor_publico
 
-                # Crear el detalle de venta asociado a la venta
                 DetalleVenta.objects.create(venta=venta, repuesto=repuesto, v_cantidad=cantidad)
 
                 # Restar el stock del repuesto
@@ -470,17 +433,14 @@ class VentaRepuestosPost(APIView):
                 # Sumar el subtotal al total de la venta
                 total_venta += subtotal
 
-            # Actualizar el campo v_total de la venta
             venta.v_total = total_venta
             venta.save()
 
             # Obtener los detalles de venta asociados a la venta
             detalles_venta = DetalleVenta.objects.filter(venta=venta)
 
-            # Serializar los detalles de venta con los datos de repuestos
             detalles_serializer = DetalleVentaSerializer(detalles_venta, many=True)
 
-            # Obtener los datos de repuestos en cada detalle de venta
             repuestos_data = []
             for detalle in detalles_venta:
                 repuesto_data = {
@@ -491,7 +451,6 @@ class VentaRepuestosPost(APIView):
                 }
                 repuestos_data.append(repuesto_data)
 
-            # Serializar la venta y agregar los datos de repuestos
             venta_serializer = VentaSerializer(venta)
             venta_data = venta_serializer.data
             venta_data['repuestos'] = repuestos_data
@@ -502,19 +461,15 @@ class VentaRepuestosPost(APIView):
         
 class VentaRepuestosGetDelete(APIView):
     def get(self, request, venta_id, format=None):
-        # Obtener la venta por su ID
         try:
             venta = Venta.objects.get(pk=venta_id)
         except Venta.DoesNotExist:
             return Response({'error': 'La venta especificada no existe'}, status=404)
 
-        # Obtener los detalles de venta asociados a la venta
         detalles_venta = DetalleVenta.objects.filter(venta=venta)
 
-        # Serializar los detalles de venta con los datos de repuestos
         detalles_serializer = DetalleVentaSerializer(detalles_venta, many=True)
 
-        # Obtener los datos de repuestos en cada detalle de venta
         repuestos_data = []
         for detalle in detalles_venta:
             repuesto_data = {
@@ -524,7 +479,6 @@ class VentaRepuestosGetDelete(APIView):
             }
             repuestos_data.append(repuesto_data)
 
-        # Serializar la venta y agregar los datos de repuestos
         venta_serializer = VentaSerializer(venta)
         venta_data = venta_serializer.data
         venta_data['repuestos'] = repuestos_data
@@ -532,13 +486,11 @@ class VentaRepuestosGetDelete(APIView):
         return Response(venta_data)
 
     def delete(self, request, venta_id, format=None):
-        # Obtener la venta por su ID
         try:
             venta = Venta.objects.get(pk=venta_id)
         except Venta.DoesNotExist:
             return Response({'error': 'La venta especificada no existe'}, status=404)
 
-        # Obtener los detalles de venta asociados a la venta
         detalles_venta = DetalleVenta.objects.filter(venta=venta)
 
         # Restablecer los repuestos utilizados en el inventario
@@ -547,7 +499,6 @@ class VentaRepuestosGetDelete(APIView):
             repuesto.r_cantidad += detalle.v_cantidad
             repuesto.save()
 
-        # Eliminar la venta y los detalles de venta
         venta.delete()
         detalles_venta.delete()
 
@@ -596,12 +547,10 @@ class ServicioDetalleView(APIView):
         return Response(resultados, status=200)
     
 class ReporteServicioView(APIView):
-
     def get(self, request, fecha_inicio, fecha_fin):
         fecha_inicio = make_aware(datetime.strptime(fecha_inicio, "%Y-%m-%d"))
         fecha_fin = make_aware(datetime.strptime(fecha_fin, "%Y-%m-%d"))+ timedelta(days=1)
 
-        # Filtrar los servicios en el intervalo de fechas dado
         servicios = Servicio.objects.filter(s_fecha_salida__range=[fecha_inicio, fecha_fin])
 
         # Calcular el total bruto sumando los totales de todos los servicios
@@ -612,7 +561,6 @@ class ReporteServicioView(APIView):
         costo_repuestos = detalle_servicios.annotate(total_costo=F('s_cantidad') * F('ds_valor_proveedor')).aggregate(Sum('total_costo'))['total_costo__sum'] or 0
         ganancias = total_bruto - costo_repuestos
 
-        # Generar el resumen de los servicios
         resumen_servicios = []
         for servicio in servicios:
             detalles = DetalleServicio.objects.filter(servicio=servicio)
@@ -638,7 +586,6 @@ class ReporteServicioView(APIView):
                 'detalle_servicio': detalle_data
             })
 
-        # Retorna el resultado
         return Response({
             'total_bruto': total_bruto,
             'ganancias': ganancias,
@@ -646,12 +593,10 @@ class ReporteServicioView(APIView):
         })
 
 class ReporteVentaView(APIView):
-
     def get(self, request, fecha_inicio, fecha_fin):
         fecha_inicio = make_aware(datetime.strptime(fecha_inicio, "%Y-%m-%d"))
         fecha_fin = make_aware(datetime.strptime(fecha_fin, "%Y-%m-%d"))+ timedelta(days=1)
 
-        # Filtrar las ventas en el intervalo de fechas dado
         ventas = Venta.objects.filter(v_fecha__range=[fecha_inicio, fecha_fin])
 
         # Calcular el total bruto sumando los totales de todas las ventas
@@ -662,7 +607,6 @@ class ReporteVentaView(APIView):
         costo_repuestos = detalle_ventas.annotate(total_costo=F('v_cantidad') * F('dv_valor_proveedor')).aggregate(Sum('total_costo'))['total_costo__sum'] or 0
         ganancias = total_bruto - costo_repuestos
 
-        # Generar el resumen de las ventas
         resumen_ventas = []
         for venta in ventas:
             detalles = DetalleVenta.objects.filter(venta=venta)
@@ -685,7 +629,6 @@ class ReporteVentaView(APIView):
                 'detalle_venta': detalle_data
             })
 
-        # Retorna el resultado
         return Response({
             'total_bruto': total_bruto,
             'ganancias': ganancias,
